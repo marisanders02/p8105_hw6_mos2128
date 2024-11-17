@@ -2,7 +2,7 @@
 title: "Homework 6"
 author: "Mari Sanders"
 date: "`r Sys.Date()`"
-output: html_document
+output: github_document
 ---
 
 ```{r setup, include=FALSE}
@@ -29,11 +29,7 @@ weather_df =
 ```
 
 ```{r}
-boot_straps <- 
-  tibble(strap_number = 1:50) %>% 
-  mutate(
-    strap_sample = map(strap_number, \(i) boot_sample(sd = sim_df_nonconst))
-  )
+
 ```
 
 # Problem 2 
@@ -76,8 +72,8 @@ city_results <- homicide_df %>%
   group_by(city_state) %>%
   nest() %>%
   mutate(
-    model = map(data, ~ glm(resolved ~ victim_age + victim_sex + victim_race, data = ., family = "binomial")),
-    results = map(model, ~ broom::tidy(.x, exponentiate = TRUE, conf.int = TRUE))
+    model = map(data, \(x) glm(resolved ~ victim_age + victim_sex + victim_race, data = x, family = "binomial")),
+    results = map(model, \(x) broom::tidy(x, exponentiate = TRUE, conf.int = TRUE))
   ) %>%
   unnest(results) %>%
   filter(term == "victim_sexMale") %>%
@@ -153,6 +149,7 @@ cv_df %>%
                values_to = "rmse", 
                names_prefix = "rmse_") %>% 
   mutate(model = fct_inorder(model)) %>% 
-  ggplot(aes(x = model, y = rmse)) +geom_violin()
+  ggplot(aes(x = model, y = rmse)) +
+  geom_violin()
 ```
 
