@@ -1,0 +1,158 @@
+---
+title: "Homework 6"
+author: "Mari Sanders"
+date: "`r Sys.Date()`"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(modelr)
+library(purrr)
+```
+
+# Problem 1 
+
+```{r}
+weather_df = 
+  rnoaa::meteo_pull_monitors(
+    c("USW00094728"),
+    var = c("PRCP", "TMIN", "TMAX"), 
+    date_min = "2017-01-01",
+    date_max = "2017-12-31") %>%
+  mutate(
+    name = recode(id, USW00094728 = "CentralPark_NY"),
+    tmin = tmin / 10,
+    tmax = tmax / 10) %>%
+  select(name, id, everything())
+```
+
+```{r}
+boot_straps <- 
+  tibble(strap_number = 1:50) %>% 
+  mutate(
+    strap_sample = map(strap_number, \(i) boot_sample(sd = sim_df_nonconst))
+  )
+```
+
+# Problem 2 
+
+Data Cleaning 
+
+```{r}
+homicide_df <- read_csv("data/homicide-data.csv") %>% 
+  janitor::clean_names() %>% 
+  unite(city_state, c(city, state), sep = ", ") %>% 
+  filter(city_state != "Dallas, TX", 
+         city_state != "Phoenix, AZ", 
+         city_state != "Kansas City, MO", 
+         city_state != "Tulsa, AL",
+         victim_race %in% c("White", "Black"),
+         victim_age != "Unknown"
+  ) %>%
+  mutate(victim_age = as.numeric(victim_age)) %>% 
+  mutate(resolved = as.numeric(disposition == "Closed by arrest"), 
+         victim_race = fct_relevel(victim_race, "White"),  ) %>% 
+  select(city_state, resolved, victim_age, victim_race, victim_sex) 
+
+
+```
+
+Baltimore 
+
+```{r}
+logistic <- 
+  homicide_df %>% 
+  filter(city_state == "Baltimore, MD") %>% 
+  glm(resolved ~ victim_age + victim_sex + victim_race, data = ., family = binomial())
+
+broom::tidy(logistic, conf.int = TRUE) %>% mutate(OR = exp(estimate)) %>% 
+  select(term, log_OR = estimate, OR, conf.low, conf.high) 
+```
+
+```{r}
+city_results <- homicide_df %>%
+  group_by(city_state) %>%
+  nest() %>%
+  mutate(
+    model = map(data, ~ glm(resolved ~ victim_age + victim_sex + victim_race, data = ., family = "binomial")),
+    results = map(model, ~ broom::tidy(.x, exponentiate = TRUE, conf.int = TRUE))
+  ) %>%
+  unnest(results) %>%
+  filter(term == "victim_sexMale") %>%
+  select(city_state, estimate, conf.low, conf.high) %>%
+  arrange(estimate) 
+```
+
+```{r}
+city_results %>% 
+  ggplot(aes(x =  reorder(city_state, estimate), y = estimate)) + 
+  geom_point() +
+  geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) +
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
+```
+
+# Problem 3 
+
+```{r}
+birthweight <- read_csv("data/birthweight.csv") %>% 
+  mutate(babysex = as.factor(babysex), 
+         frace = as.factor(frace), 
+         mrace = as.factor(mrace), 
+         malform = as.factor(malform))
+
+colSums(is.na(birthweight))
+
+```
+
+smoken, ppwt, gaweeks, momage, wtgain, malform, pnumlbw
+
+```{r}
+birthweight_model <- 
+  lm(bwt ~ babysex + bhead + blength + smoken + ppbmi + gaweeks + momage + delwt, data = birthweight)
+summary(birthweight_model)
+```
+
+```{r}
+birthweight %>%
+  add_predictions(birthweight_model) %>%
+  add_residuals(birthweight_model) %>% 
+  ggplot(aes(x = pred, y = resid)) + 
+  geom_point() 
+```
+
+```{r}
+main_effects <- 
+  lm(bwt ~ blength + gaweeks, data = birthweight)
+
+interactions <- 
+  lm(bwt ~bhead + blength + babysex + bhead*blength*babysex, data = birthweight)
+```
+
+```{r}
+cv_df <- 
+  crossv_mc(birthweight, 100) %>% 
+  mutate(
+    train = map(train, as_tibble), 
+    test = map(test, as_tibble)
+  ) %>% 
+  mutate(my_model = map(train, \(df) lm(bwt ~ babysex + bhead + blength + smoken + ppbmi + gaweeks + momage + delwt, data = df)),
+    main_effects = map(train, \(df) lm(bwt ~ blength, gaweeks, data = df)), 
+         interactions = map(train, \(df) lm(bwt ~bhead + blength + babysex + bhead*blength*babysex, data = df))) %>% 
+  mutate(
+    rmse_mymodel = map2_dbl(my_model, test, \(mod, df) rmse(model = mod, data = df)), 
+    rmse_maineffects = map2_dbl(main_effects, test, \(mod, df) rmse(model = mod, data = df)), 
+    rmse_interactions = map2_dbl(interactions, test, \(mod, df) rmse(model = mod, data = df))
+  )
+
+cv_df %>% 
+  select(starts_with("rmse")) %>% 
+  pivot_longer(everything(), 
+               names_to = "model", 
+               values_to = "rmse", 
+               names_prefix = "rmse_") %>% 
+  mutate(model = fct_inorder(model)) %>% 
+  ggplot(aes(x = model, y = rmse)) +geom_violin()
+```
+
