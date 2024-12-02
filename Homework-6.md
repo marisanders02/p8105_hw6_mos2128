@@ -48,15 +48,6 @@ log_beta <- boots %>%
   mutate(log_beta = log(beta0*beta1)) 
 
 log_beta %>% 
-  pull(log_beta) %>% 
-  quantile(0.025, 0.975)
-```
-
-    ##     2.5% 
-    ## 1.965467
-
-``` r
-log_beta %>% 
   ggplot(aes(x = log_beta)) + 
   geom_density()
 ```
