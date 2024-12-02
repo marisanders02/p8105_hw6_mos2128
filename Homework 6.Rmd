@@ -29,8 +29,37 @@ weather_df =
 ```
 
 ```{r}
+boots <- 
+  weather_df %>% 
+  bootstrap(n = 5000) %>% 
+  mutate(
+    models = map(strap, ~lm(tmax~tmin, data = .)), 
+    results = map(models, broom::tidy)
+  )
 
 ```
+
+```{r}
+log_beta <- boots %>% 
+  select(.id, results) %>% 
+  unnest(results) %>% 
+  select(.id, term, estimate) %>% 
+  pivot_wider(
+    names_from = "term", 
+    values_from = "estimate"
+  ) %>% 
+  rename(beta0 = "(Intercept)", beta1 = "tmin") %>% 
+  mutate(log_beta = log(beta0*beta1)) 
+
+log_beta %>% 
+  pull(log_beta) %>% 
+  quantile(0.025, 0.975)
+
+log_beta %>% 
+  ggplot(aes(x = log_beta)) + 
+  geom_density()
+```
+
 
 # Problem 2 
 
@@ -66,11 +95,11 @@ logistic <-
 broom::tidy(logistic, conf.int = TRUE) %>% mutate(OR = exp(estimate), 
                                                   conf_low = exp(conf.low), 
                                                   conf_high = exp(conf.high)) %>% 
-  select(term, log_OR = estimate, OR, conf.low, conf.high) %>% filter(term == "victim_sexMale") %>% 
+  select(term, log_OR = estimate, OR, conf_low, conf_high) %>% filter(term == "victim_sexMale") %>% 
   knitr::kable(digits = 3)
 ```
 
-In Baltimore, homicides of Males were 0.426 times more likely to be unsolved compared to homicides of white victims after adjusting for all other variables. 
+In Baltimore, homicides of Male victims were 0.426 times more likely to be unsolved compared to homicides of Female victims after adjusting for all other variables. 
 
 ```{r}
 city_results <- homicide_df %>%
@@ -81,9 +110,9 @@ city_results <- homicide_df %>%
     results = map(model, broom::tidy, conf.int = TRUE)) %>%
   unnest(results) %>%
   mutate(OR = exp(estimate), 
-         CI_lower = exp(estimate - std.error * qnorm(0.975)),
-         CI_upper = exp(estimate + std.error * qnorm(0.975))) %>% 
-  select(city_state, term, OR, CI_lower, CI_upper) %>%
+         conf_low = exp(conf.low), 
+                                                  conf_high = exp(conf.high)) %>% 
+  select(city_state, term, OR, conf_low, conf_high) %>%
    filter(term == "victim_sexMale") 
 
 city_results %>% knitr::kable(digits = 3)
@@ -93,7 +122,7 @@ city_results %>% knitr::kable(digits = 3)
 city_results %>% 
   ggplot(aes(x = fct_reorder(city_state, OR), y = OR)) + 
   geom_point() +
-  geom_errorbar(aes(ymin = CI_lower, ymax = CI_upper)) +
+  geom_errorbar(aes(ymin = conf_low, ymax = conf_high)) +
   labs(
     title = "Unsolved homicides, Male vs. Female Victims",
     x = "City", 
