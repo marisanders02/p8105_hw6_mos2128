@@ -51,19 +51,25 @@ r_squared_betas <-
   select(-strap)
 
 r_squared_betas %>% pull(log_betas) %>% 
-  quantile(probs = c(0.025, 0.975))
+  quantile(probs = c(0.025, 0.975)) %>% 
+  knitr::kable(col.names = c("lower", "upper"))
 ```
 
-    ##     2.5%    97.5% 
-    ## 1.964572 2.059126
+| lower |    upper |
+|:------|---------:|
+| 2.5%  | 1.964572 |
+| 97.5% | 2.059126 |
 
 ``` r
 r_squared_betas %>% pull(r_squared) %>% 
-  quantile(probs = c(0.025, 0.975))
+  quantile(probs = c(0.025, 0.975)) %>% 
+  knitr::kable(col.names = c("lower", "upper"))
 ```
 
-    ##      2.5%     97.5% 
-    ## 0.8938410 0.9275271
+| lower |     upper |
+|:------|----------:|
+| 2.5%  | 0.8938410 |
+| 97.5% | 0.9275271 |
 
 ``` r
 ggplot(r_squared_betas, aes(x = log_betas)) + geom_density()
@@ -302,7 +308,12 @@ coef(best_model)
     ## smoken         -3.3140939
     ## wtgain          2.6324389
 
-Used lasso to find the most important coefficients
+Used lasso to find the most important coefficients because there might
+be some collinearity between variables in the data. Lasso seeks to
+minimize the MSE by choosing a $\lambda$ value. By doing lasso, I found
+that the best model is one that includes `babysex`, `bhead`,`blength`,
+`delwt`, `fincome`, `frace`, `gaweeks`, `menarche`, `mheight`,
+`momage`,`mrace`, `parity`, `smoken`, and `wtgain`.
 
 ``` r
 birthweight_model_adjusted <- 
@@ -402,3 +413,10 @@ cv_df %>%
 ```
 
 ![](Homework-6_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+
+It seems like the models that I created using lasso have the lowest rmse
+value and is then the best model. This is the model that contains
+`babysex`, `bhead`,`blength`, `delwt`, `fincome`, `frace`, `gaweeks`,
+`menarche`, `mheight`, `momage`,`mrace`, `parity`, `smoken`, and
+`wtgain`. The worst model is the model that uses `blength` and `gaweeks`
+because it has the higest rmse.

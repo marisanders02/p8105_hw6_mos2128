@@ -57,10 +57,12 @@ r_squared_betas <-
   select(-strap)
 
 r_squared_betas %>% pull(log_betas) %>% 
-  quantile(probs = c(0.025, 0.975))
+  quantile(probs = c(0.025, 0.975)) %>% 
+  knitr::kable(col.names = c("lower", "upper"))
 
 r_squared_betas %>% pull(r_squared) %>% 
-  quantile(probs = c(0.025, 0.975))
+  quantile(probs = c(0.025, 0.975)) %>% 
+  knitr::kable(col.names = c("lower", "upper"))
 
 
 ggplot(r_squared_betas, aes(x = log_betas)) + geom_density()
@@ -146,7 +148,7 @@ All of the cities, except for Tulsa, Atlanta, Richmond, Nashville, Fresno, Stock
 # Problem 3 
 
 ```{r}
-birthweight <- read_csv("data/birthweight.csv") %>% janitor::clean_names() %>% 
+birthweight <- read_csv("data/birthweight.csv") %>% 
   mutate(babysex = as.factor(babysex), 
          frace = as.factor(frace), 
          mrace = as.factor(mrace), 
