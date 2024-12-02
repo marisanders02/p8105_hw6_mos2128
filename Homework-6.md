@@ -1,7 +1,7 @@
 Homework 6
 ================
 Mari Sanders
-2024-12-01
+2024-12-02
 
 # Problem 1
 
@@ -59,7 +59,8 @@ log_beta %>%
 Data Cleaning
 
 ``` r
-homicide_df <- read_csv("data/homicide-data.csv", na = c("", "NA", "Unknown")) %>% filter(victim_race != "NA") %>% 
+homicide_df <- read_csv("data/homicide-data.csv", na = c("", "NA", "Unknown")) %>% 
+  filter(victim_race != "NA") %>% 
   janitor::clean_names() %>% 
   unite(city_state, c(city, state), sep = ", ") %>% 
   filter(city_state != "Dallas, TX", 
@@ -92,10 +93,12 @@ logistic <-
   filter(city_state == "Baltimore, MD") %>% 
   glm(resolved ~ victim_age + victim_sex + victim_race, data = ., family = binomial())
 
-broom::tidy(logistic, conf.int = TRUE) %>% mutate(OR = exp(estimate), 
-                                                  conf_low = exp(conf.low), 
-                                                  conf_high = exp(conf.high)) %>% 
-  select(term, log_OR = estimate, OR, conf_low, conf_high) %>% filter(term == "victim_sexMale") %>% 
+broom::tidy(logistic, conf.int = TRUE) %>% 
+  mutate(OR = exp(estimate), 
+         conf_low = exp(conf.low), 
+         conf_high = exp(conf.high)) %>% 
+  select(term, log_OR = estimate, OR, conf_low, conf_high) %>% 
+  filter(term == "victim_sexMale") %>% 
   knitr::kable(digits = 3)
 ```
 
@@ -103,8 +106,8 @@ broom::tidy(logistic, conf.int = TRUE) %>% mutate(OR = exp(estimate),
 |:---------------|-------:|------:|---------:|----------:|
 | victim_sexMale | -0.854 | 0.426 |    0.324 |     0.558 |
 
-In Baltimore, homicides of Male victims were 0.426 times more likely to
-be unsolved compared to homicides of Female victims after adjusting for
+In Baltimore, homicides of male victims were 0.426 times more likely to
+be unsolved compared to homicides of female victims after adjusting for
 all other variables.
 
 ``` r
@@ -117,7 +120,7 @@ city_results <- homicide_df %>%
   unnest(results) %>%
   mutate(OR = exp(estimate), 
          conf_low = exp(conf.low), 
-                                                  conf_high = exp(conf.high)) %>% 
+         conf_high = exp(conf.high)) %>% 
   select(city_state, term, OR, conf_low, conf_high) %>%
    filter(term == "victim_sexMale") 
 
@@ -180,7 +183,7 @@ city_results %>%
   geom_point() +
   geom_errorbar(aes(ymin = conf_low, ymax = conf_high)) +
   labs(
-    title = "Unsolved homicides, Male vs. Female Victims",
+    title = "Solved homicides, Male vs. Female Victims",
     x = "City", 
     y = "Adjusted Odds Ratio"
   ) +
@@ -188,6 +191,11 @@ city_results %>%
 ```
 
 ![](Homework-6_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+
+All of the cities, except for Tulsa, Atlanta, Richmond, Nashville,
+Fresno, Stockton, and Albuquerque have an adjusted odds ratio less
+than 1. This means that males in all cities except for these are more
+likely to have unsolved homicides than females.
 
 # Problem 3
 
@@ -232,91 +240,91 @@ birthweight %>%
 There are no missing values in this dataset.
 
 ``` r
-birthweight_model <- 
-  lm(bwt ~ ., data = birthweight)
-summary(birthweight_model)
+x <- birthweight %>% 
+  select(-bwt) %>% data.matrix()
+y <- birthweight %>% 
+  select(bwt) %>% pull()
+cv_model <- cv.glmnet(x,y, alpha = 1)
+best_lambda <- cv_model$lambda.min
+plot(cv_model)
 ```
 
-    ## 
-    ## Call:
-    ## lm(formula = bwt ~ ., data = birthweight)
-    ## 
-    ## Residuals:
-    ##      Min       1Q   Median       3Q      Max 
-    ## -1097.68  -184.86    -3.33   173.09  2344.15 
-    ## 
-    ## Coefficients: (3 not defined because of singularities)
-    ##               Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept) -6265.3914   660.4011  -9.487  < 2e-16 ***
-    ## babysex2       28.7073     8.4652   3.391 0.000702 ***
-    ## bhead         130.7781     3.4523  37.881  < 2e-16 ***
-    ## blength        74.9536     2.0217  37.075  < 2e-16 ***
-    ## delwt           4.1007     0.3948  10.386  < 2e-16 ***
-    ## fincome         0.2898     0.1795   1.614 0.106551    
-    ## frace2         14.3313    46.1501   0.311 0.756168    
-    ## frace3         21.2361    69.2960   0.306 0.759273    
-    ## frace4        -46.9962    44.6782  -1.052 0.292912    
-    ## frace8          4.2969    74.0741   0.058 0.953745    
-    ## gaweeks        11.5494     1.4654   7.882 4.06e-15 ***
-    ## malform1        9.7650    70.6259   0.138 0.890039    
-    ## menarche       -3.5508     2.8951  -1.226 0.220083    
-    ## mheight         9.7874    10.3116   0.949 0.342588    
-    ## momage          0.7593     1.2221   0.621 0.534418    
-    ## mrace2       -151.4354    46.0453  -3.289 0.001014 ** 
-    ## mrace3        -91.3866    71.9190  -1.271 0.203908    
-    ## mrace4        -56.4787    45.1369  -1.251 0.210901    
-    ## parity         95.5411    40.4793   2.360 0.018307 *  
-    ## pnumlbw             NA         NA      NA       NA    
-    ## pnumsga             NA         NA      NA       NA    
-    ## ppbmi           4.3538    14.8913   0.292 0.770017    
-    ## ppwt           -3.4716     2.6121  -1.329 0.183913    
-    ## smoken         -4.8544     0.5871  -8.269  < 2e-16 ***
-    ## wtgain              NA         NA      NA       NA    
-    ## ---
-    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
-    ## 
-    ## Residual standard error: 272.5 on 4320 degrees of freedom
-    ## Multiple R-squared:  0.7183, Adjusted R-squared:  0.717 
-    ## F-statistic: 524.6 on 21 and 4320 DF,  p-value: < 2.2e-16
+![](Homework-6_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
 
-Since `babysex2`, `bhead`, `blength`, `delwt`, `gaweeks`, `mrace`,
-`mrace2`, `parity` and `smoken` are all significant, i am going to
-examine what the adjusted $r^2$ looks like
+``` r
+best_model <- glmnet(x, y, alpha = 1, lambda = best_lambda)
+coef(best_model)
+```
+
+    ## 20 x 1 sparse Matrix of class "dgCMatrix"
+    ##                        s0
+    ## (Intercept) -6159.0454264
+    ## babysex        26.7837191
+    ## bhead         133.7823509
+    ## blength        76.2335342
+    ## delwt           1.1321579
+    ## fincome         0.6039174
+    ## frace         -10.7669487
+    ## gaweeks        11.6394672
+    ## malform         .        
+    ## menarche       -2.2764510
+    ## mheight         4.7238901
+    ## momage          2.8739417
+    ## mrace         -41.7053780
+    ## parity         65.1187493
+    ## pnumlbw         .        
+    ## pnumsga         .        
+    ## ppbmi           .        
+    ## ppwt            .        
+    ## smoken         -3.3140939
+    ## wtgain          2.6324389
+
+Used lasso to find the most important coefficients
 
 ``` r
 birthweight_model_adjusted <- 
-  lm(bwt~ babysex + bhead + blength + delwt + gaweeks + mrace + parity + smoken, data = birthweight)
+  lm(bwt~ babysex + bhead + blength + delwt  + fincome + frace + gaweeks + menarche + mheight + momage + mrace + parity + smoken + wtgain, data = birthweight)
 summary(birthweight_model_adjusted)
 ```
 
     ## 
     ## Call:
-    ## lm(formula = bwt ~ babysex + bhead + blength + delwt + gaweeks + 
-    ##     mrace + parity + smoken, data = birthweight)
+    ## lm(formula = bwt ~ babysex + bhead + blength + delwt + fincome + 
+    ##     frace + gaweeks + menarche + mheight + momage + mrace + parity + 
+    ##     smoken + wtgain, data = birthweight)
     ## 
     ## Residuals:
     ##      Min       1Q   Median       3Q      Max 
-    ## -1119.67  -181.24    -5.87   173.51  2340.76 
+    ## -1096.18  -184.97    -3.28   173.37  2343.93 
     ## 
     ## Coefficients:
     ##               Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept) -5822.5934    98.8325 -58.914  < 2e-16 ***
-    ## babysex2       28.6609     8.4951   3.374 0.000748 ***
-    ## bhead         131.6982     3.4607  38.056  < 2e-16 ***
-    ## blength        75.8653     2.0210  37.538  < 2e-16 ***
-    ## delwt           2.2649     0.1961  11.550  < 2e-16 ***
-    ## gaweeks        12.1400     1.4654   8.284  < 2e-16 ***
-    ## mrace2       -146.7893     9.2435 -15.880  < 2e-16 ***
-    ## mrace3        -71.5880    42.4809  -1.685 0.092026 .  
-    ## mrace4       -119.5979    18.7656  -6.373 2.04e-10 ***
-    ## parity         98.6113    40.5334   2.433 0.015021 *  
-    ## smoken         -4.7472     0.5882  -8.071 8.96e-16 ***
+    ## (Intercept) -6076.3394   140.3380 -43.298  < 2e-16 ***
+    ## babysex2       28.6687     8.4621   3.388 0.000711 ***
+    ## bhead         130.8115     3.4500  37.917  < 2e-16 ***
+    ## blength        74.9520     2.0209  37.088  < 2e-16 ***
+    ## delwt           1.3812     0.2363   5.846 5.41e-09 ***
+    ## fincome         0.2903     0.1794   1.618 0.105779    
+    ## frace2         14.4462    46.1368   0.313 0.754207    
+    ## frace3         21.0968    69.2793   0.305 0.760748    
+    ## frace4        -47.1129    44.6669  -1.055 0.291594    
+    ## frace8          4.5682    74.0476   0.062 0.950810    
+    ## gaweeks        11.5439     1.4649   7.880 4.11e-15 ***
+    ## menarche       -3.5779     2.8932  -1.237 0.216280    
+    ## mheight         6.8160     1.8003   3.786 0.000155 ***
+    ## momage          0.7699     1.2214   0.630 0.528491    
+    ## mrace2       -151.5475    46.0336  -3.292 0.001002 ** 
+    ## mrace3        -92.0031    71.8741  -1.280 0.200593    
+    ## mrace4        -56.6313    45.1245  -1.255 0.209546    
+    ## parity         95.3411    40.4655   2.356 0.018512 *  
+    ## smoken         -4.8542     0.5867  -8.273  < 2e-16 ***
+    ## wtgain          2.7202     0.4327   6.286 3.58e-10 ***
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## Residual standard error: 273.8 on 4331 degrees of freedom
-    ## Multiple R-squared:  0.7148, Adjusted R-squared:  0.7142 
-    ## F-statistic:  1086 on 10 and 4331 DF,  p-value: < 2.2e-16
+    ## Residual standard error: 272.4 on 4322 degrees of freedom
+    ## Multiple R-squared:  0.7183, Adjusted R-squared:  0.7171 
+    ## F-statistic: 580.1 on 19 and 4322 DF,  p-value: < 2.2e-16
 
 ``` r
 birthweight %>%
@@ -326,7 +334,7 @@ birthweight %>%
   geom_point() 
 ```
 
-![](Homework-6_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
+![](Homework-6_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
 
 ``` r
 main_effects <- 
@@ -343,7 +351,7 @@ cv_df <-
     train = map(train, as_tibble), 
     test = map(test, as_tibble)
   ) %>% 
-  mutate(my_model = map(train, \(df) lm(bwt~ babysex + bhead + blength + delwt + gaweeks + mrace + parity + smoken, data = df)),
+  mutate(my_model = map(train, \(df) lm(bwt~ babysex + bhead + blength + delwt  + fincome + frace + gaweeks + menarche + mheight + momage + mrace + parity + smoken + wtgain, data = df)),
     main_effects = map(train, \(df) lm(bwt ~ blength, gaweeks, data = df)), 
          interactions = map(train, \(df) lm(bwt ~bhead + blength + babysex + bhead*blength*babysex, data = df))) %>% 
   mutate(
@@ -353,12 +361,10 @@ cv_df <-
   )
 ```
 
-    ## Warning: There were 2 warnings in `mutate()`.
-    ## The first warning was:
+    ## Warning: There was 1 warning in `mutate()`.
     ## ℹ In argument: `rmse_mymodel = map2_dbl(...)`.
     ## Caused by warning in `predict.lm()`:
     ## ! prediction from rank-deficient fit; attr(*, "non-estim") has doubtful cases
-    ## ℹ Run `dplyr::last_dplyr_warnings()` to see the 1 remaining warning.
 
 ``` r
 cv_df %>% 
@@ -372,4 +378,4 @@ cv_df %>%
   geom_violin()
 ```
 
-![](Homework-6_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
+![](Homework-6_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->

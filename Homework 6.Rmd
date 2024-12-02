@@ -10,6 +10,8 @@ knitr::opts_chunk$set(echo = TRUE)
 library(tidyverse)
 library(modelr)
 library(purrr)
+library(glmnet)
+set.seed(10)
 ```
 
 # Problem 1 
@@ -62,7 +64,8 @@ log_beta %>%
 Data Cleaning 
 
 ```{r}
-homicide_df <- read_csv("data/homicide-data.csv", na = c("", "NA", "Unknown")) %>% filter(victim_race != "NA") %>% 
+homicide_df <- read_csv("data/homicide-data.csv", na = c("", "NA", "Unknown")) %>% 
+  filter(victim_race != "NA") %>% 
   janitor::clean_names() %>% 
   unite(city_state, c(city, state), sep = ", ") %>% 
   filter(city_state != "Dallas, TX", 
@@ -76,8 +79,6 @@ homicide_df <- read_csv("data/homicide-data.csv", na = c("", "NA", "Unknown")) %
            resolved = as.numeric(disposition == "Closed by arrest"), 
         victim_race = fct_relevel(victim_race, "White")) %>% 
   select(city_state, resolved, victim_age, victim_race, victim_sex) 
-
-
 ```
 
 Baltimore 
@@ -88,14 +89,16 @@ logistic <-
   filter(city_state == "Baltimore, MD") %>% 
   glm(resolved ~ victim_age + victim_sex + victim_race, data = ., family = binomial())
 
-broom::tidy(logistic, conf.int = TRUE) %>% mutate(OR = exp(estimate), 
-                                                  conf_low = exp(conf.low), 
-                                                  conf_high = exp(conf.high)) %>% 
-  select(term, log_OR = estimate, OR, conf_low, conf_high) %>% filter(term == "victim_sexMale") %>% 
+broom::tidy(logistic, conf.int = TRUE) %>% 
+  mutate(OR = exp(estimate), 
+         conf_low = exp(conf.low), 
+         conf_high = exp(conf.high)) %>% 
+  select(term, log_OR = estimate, OR, conf_low, conf_high) %>% 
+  filter(term == "victim_sexMale") %>% 
   knitr::kable(digits = 3)
 ```
 
-In Baltimore, homicides of Male victims were 0.426 times more likely to be unsolved compared to homicides of Female victims after adjusting for all other variables. 
+In Baltimore, homicides of male victims were 0.426 times more likely to be unsolved compared to homicides of female victims after adjusting for all other variables. 
 
 ```{r}
 city_results <- homicide_df %>%
@@ -107,7 +110,7 @@ city_results <- homicide_df %>%
   unnest(results) %>%
   mutate(OR = exp(estimate), 
          conf_low = exp(conf.low), 
-                                                  conf_high = exp(conf.high)) %>% 
+         conf_high = exp(conf.high)) %>% 
   select(city_state, term, OR, conf_low, conf_high) %>%
    filter(term == "victim_sexMale") 
 
@@ -120,12 +123,14 @@ city_results %>%
   geom_point() +
   geom_errorbar(aes(ymin = conf_low, ymax = conf_high)) +
   labs(
-    title = "Unsolved homicides, Male vs. Female Victims",
+    title = "Solved homicides, Male vs. Female Victims",
     x = "City", 
     y = "Adjusted Odds Ratio"
   ) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
+
+All of the cities, except for Tulsa, Atlanta, Richmond, Nashville, Fresno, Stockton, and Albuquerque have an adjusted odds ratio less than 1. This means that males in all cities except for these are more likely to have unsolved homicides than females. 
 
 # Problem 3 
 
@@ -139,22 +144,30 @@ birthweight <- read_csv("data/birthweight.csv") %>%
 birthweight %>% 
   is.na() %>% 
   summary()
-
 ```
 
 There are no missing values in this dataset. 
 
 ```{r}
-birthweight_model <- 
-  lm(bwt ~ ., data = birthweight)
-summary(birthweight_model)
+x <- birthweight %>% 
+  select(-bwt) %>% data.matrix()
+y <- birthweight %>% 
+  select(bwt) %>% pull()
+cv_model <- cv.glmnet(x,y, alpha = 1)
+best_lambda <- cv_model$lambda.min
+plot(cv_model)
 ```
 
-Since `babysex2`, `bhead`, `blength`, `delwt`, `gaweeks`, `mrace`, `mrace2`, `parity` and `smoken` are all significant, i am going to examine what the adjusted $r^2$ looks like
+```{r}
+best_model <- glmnet(x, y, alpha = 1, lambda = best_lambda)
+coef(best_model)
+```
+
+Used lasso to find the most important coefficients 
 
 ```{r}
 birthweight_model_adjusted <- 
-  lm(bwt~ babysex + bhead + blength + delwt + gaweeks + mrace + parity + smoken, data = birthweight)
+  lm(bwt~ babysex + bhead + blength + delwt  + fincome + frace + gaweeks + menarche + mheight + momage + mrace + parity + smoken + wtgain, data = birthweight)
 summary(birthweight_model_adjusted)
 ```
 
@@ -181,7 +194,7 @@ cv_df <-
     train = map(train, as_tibble), 
     test = map(test, as_tibble)
   ) %>% 
-  mutate(my_model = map(train, \(df) lm(bwt~ babysex + bhead + blength + delwt + gaweeks + mrace + parity + smoken, data = df)),
+  mutate(my_model = map(train, \(df) lm(bwt~ babysex + bhead + blength + delwt  + fincome + frace + gaweeks + menarche + mheight + momage + mrace + parity + smoken + wtgain, data = df)),
     main_effects = map(train, \(df) lm(bwt ~ blength, gaweeks, data = df)), 
          interactions = map(train, \(df) lm(bwt ~bhead + blength + babysex + bhead*blength*babysex, data = df))) %>% 
   mutate(
