@@ -37,7 +37,7 @@ weather_df =
 Data Cleaning 
 
 ```{r}
-homicide_df <- read_csv("data/homicide-data.csv") %>% 
+homicide_df <- read_csv("data/homicide-data.csv", na = c("", "NA", "Unknown")) %>% filter(victim_race != "NA") %>% 
   janitor::clean_names() %>% 
   unite(city_state, c(city, state), sep = ", ") %>% 
   filter(city_state != "Dallas, TX", 
@@ -47,9 +47,9 @@ homicide_df <- read_csv("data/homicide-data.csv") %>%
          victim_race %in% c("White", "Black"),
          victim_age != "Unknown"
   ) %>%
-  mutate(victim_age = as.numeric(victim_age)) %>% 
-  mutate(resolved = as.numeric(disposition == "Closed by arrest"), 
-         victim_race = fct_relevel(victim_race, "White"),  ) %>% 
+  mutate(victim_age = as.numeric(victim_age), 
+           resolved = as.numeric(disposition == "Closed by arrest"), 
+        victim_race = fct_relevel(victim_race, "White")) %>% 
   select(city_state, resolved, victim_age, victim_race, victim_sex) 
 
 
@@ -63,29 +63,42 @@ logistic <-
   filter(city_state == "Baltimore, MD") %>% 
   glm(resolved ~ victim_age + victim_sex + victim_race, data = ., family = binomial())
 
-broom::tidy(logistic, conf.int = TRUE) %>% mutate(OR = exp(estimate)) %>% 
-  select(term, log_OR = estimate, OR, conf.low, conf.high) 
+broom::tidy(logistic, conf.int = TRUE) %>% mutate(OR = exp(estimate), 
+                                                  conf_low = exp(conf.low), 
+                                                  conf_high = exp(conf.high)) %>% 
+  select(term, log_OR = estimate, OR, conf.low, conf.high) %>% filter(term == "victim_sexMale") %>% 
+  knitr::kable(digits = 3)
 ```
+
+In Baltimore, homicides of Males were 0.426 times more likely to be unsolved compared to homicides of white victims after adjusting for all other variables. 
 
 ```{r}
 city_results <- homicide_df %>%
   group_by(city_state) %>%
   nest() %>%
   mutate(
-    model = map(data, \(x) glm(resolved ~ victim_age + victim_sex + victim_race, data = x, family = "binomial")),
-    results = map(model, \(x) broom::tidy(x, exponentiate = TRUE, conf.int = TRUE))
-  ) %>%
+    model = map(data, ~glm(resolved ~ victim_age + victim_sex + victim_race, data = ., family = "binomial")),
+    results = map(model, broom::tidy, conf.int = TRUE)) %>%
   unnest(results) %>%
-  filter(term == "victim_sexMale") %>%
-  select(city_state, estimate, conf.low, conf.high) %>%
-  arrange(estimate) 
+  mutate(OR = exp(estimate), 
+         CI_lower = exp(estimate - std.error * qnorm(0.975)),
+         CI_upper = exp(estimate + std.error * qnorm(0.975))) %>% 
+  select(city_state, term, OR, CI_lower, CI_upper) %>%
+   filter(term == "victim_sexMale") 
+
+city_results %>% knitr::kable(digits = 3)
 ```
 
 ```{r}
 city_results %>% 
-  ggplot(aes(x =  reorder(city_state, estimate), y = estimate)) + 
+  ggplot(aes(x = fct_reorder(city_state, OR), y = OR)) + 
   geom_point() +
-  geom_errorbar(aes(ymin = conf.low, ymax = conf.high)) +
+  geom_errorbar(aes(ymin = CI_lower, ymax = CI_upper)) +
+  labs(
+    title = "Unsolved homicides, Male vs. Female Victims",
+    x = "City", 
+    y = "Adjusted Odds Ratio"
+  ) +
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
 
@@ -98,11 +111,13 @@ birthweight <- read_csv("data/birthweight.csv") %>%
          mrace = as.factor(mrace), 
          malform = as.factor(malform))
 
-colSums(is.na(birthweight))
+birthweight %>% 
+  is.na() %>% 
+  summary()
 
 ```
 
-smoken, ppwt, gaweeks, momage, wtgain, malform, pnumlbw
+There are no missing values in this dataset. 
 
 ```{r}
 birthweight_model <- 
