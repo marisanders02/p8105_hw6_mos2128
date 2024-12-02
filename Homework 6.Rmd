@@ -31,32 +31,43 @@ weather_df =
 ```
 
 ```{r}
+
+betas <- function(lm) {
+    broom::tidy(lm) %>% 
+    pull(estimate) %>% 
+    prod %>% log()
+}
+r_squareds <- function(lm) {
+  broom::glance(lm) %>% 
+    pull(r.squared) 
+}
+
 boots <- 
   weather_df %>% 
   bootstrap(n = 5000) %>% 
   mutate(
     models = map(strap, ~lm(tmax~tmin, data = .)), 
-    results = map(models, broom::tidy)
+    log_betas = map(models, betas), 
+    r_squared = map(models, r_squareds)
   )
 
+r_squared_betas <- 
+  boots %>% 
+  unnest(log_betas:r_squared) %>% 
+  select(-strap)
+
+r_squared_betas %>% pull(log_betas) %>% 
+  quantile(probs = c(0.025, 0.975))
+
+r_squared_betas %>% pull(r_squared) %>% 
+  quantile(probs = c(0.025, 0.975))
+
+
+ggplot(r_squared_betas, aes(x = log_betas)) + geom_density()
+
+ggplot(r_squared_betas, aes(x = r_squared)) + geom_density()
 ```
 
-```{r}
-log_beta <- boots %>% 
-  select(.id, results) %>% 
-  unnest(results) %>% 
-  select(.id, term, estimate) %>% 
-  pivot_wider(
-    names_from = "term", 
-    values_from = "estimate"
-  ) %>% 
-  rename(beta0 = "(Intercept)", beta1 = "tmin") %>% 
-  mutate(log_beta = log(beta0*beta1)) 
-
-log_beta %>% 
-  ggplot(aes(x = log_beta)) + 
-  geom_density()
-```
 
 
 # Problem 2 

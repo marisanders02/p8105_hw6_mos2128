@@ -26,33 +26,56 @@ weather_df =
     ## file min/max dates: 1869-01-01 / 2024-09-30
 
 ``` r
+betas <- function(lm) {
+    broom::tidy(lm) %>% 
+    pull(estimate) %>% 
+    prod %>% log()
+}
+r_squareds <- function(lm) {
+  broom::glance(lm) %>% 
+    pull(r.squared) 
+}
+
 boots <- 
   weather_df %>% 
   bootstrap(n = 5000) %>% 
   mutate(
     models = map(strap, ~lm(tmax~tmin, data = .)), 
-    results = map(models, broom::tidy)
+    log_betas = map(models, betas), 
+    r_squared = map(models, r_squareds)
   )
+
+r_squared_betas <- 
+  boots %>% 
+  unnest(log_betas:r_squared) %>% 
+  select(-strap)
+
+r_squared_betas %>% pull(log_betas) %>% 
+  quantile(probs = c(0.025, 0.975))
 ```
+
+    ##     2.5%    97.5% 
+    ## 1.964572 2.059126
 
 ``` r
-log_beta <- boots %>% 
-  select(.id, results) %>% 
-  unnest(results) %>% 
-  select(.id, term, estimate) %>% 
-  pivot_wider(
-    names_from = "term", 
-    values_from = "estimate"
-  ) %>% 
-  rename(beta0 = "(Intercept)", beta1 = "tmin") %>% 
-  mutate(log_beta = log(beta0*beta1)) 
-
-log_beta %>% 
-  ggplot(aes(x = log_beta)) + 
-  geom_density()
+r_squared_betas %>% pull(r_squared) %>% 
+  quantile(probs = c(0.025, 0.975))
 ```
 
-![](Homework-6_files/figure-gfm/unnamed-chunk-3-1.png)<!-- -->
+    ##      2.5%     97.5% 
+    ## 0.8938410 0.9275271
+
+``` r
+ggplot(r_squared_betas, aes(x = log_betas)) + geom_density()
+```
+
+![](Homework-6_files/figure-gfm/unnamed-chunk-2-1.png)<!-- -->
+
+``` r
+ggplot(r_squared_betas, aes(x = r_squared)) + geom_density()
+```
+
+![](Homework-6_files/figure-gfm/unnamed-chunk-2-2.png)<!-- -->
 
 # Problem 2
 
@@ -190,7 +213,7 @@ city_results %>%
   theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust = 1))
 ```
 
-![](Homework-6_files/figure-gfm/unnamed-chunk-7-1.png)<!-- -->
+![](Homework-6_files/figure-gfm/unnamed-chunk-6-1.png)<!-- -->
 
 All of the cities, except for Tulsa, Atlanta, Richmond, Nashville,
 Fresno, Stockton, and Albuquerque have an adjusted odds ratio less
@@ -249,7 +272,7 @@ best_lambda <- cv_model$lambda.min
 plot(cv_model)
 ```
 
-![](Homework-6_files/figure-gfm/unnamed-chunk-9-1.png)<!-- -->
+![](Homework-6_files/figure-gfm/unnamed-chunk-8-1.png)<!-- -->
 
 ``` r
 best_model <- glmnet(x, y, alpha = 1, lambda = best_lambda)
@@ -334,7 +357,7 @@ birthweight %>%
   geom_point() 
 ```
 
-![](Homework-6_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+![](Homework-6_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
 
 ``` r
 main_effects <- 
@@ -378,4 +401,4 @@ cv_df %>%
   geom_violin()
 ```
 
-![](Homework-6_files/figure-gfm/unnamed-chunk-14-1.png)<!-- -->
+![](Homework-6_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->
