@@ -233,46 +233,100 @@ There are no missing values in this dataset.
 
 ``` r
 birthweight_model <- 
-  lm(bwt ~ babysex + bhead + blength + smoken + ppbmi + gaweeks + momage + delwt, data = birthweight)
+  lm(bwt ~ ., data = birthweight)
 summary(birthweight_model)
 ```
 
     ## 
     ## Call:
-    ## lm(formula = bwt ~ babysex + bhead + blength + smoken + ppbmi + 
-    ##     gaweeks + momage + delwt, data = birthweight)
+    ## lm(formula = bwt ~ ., data = birthweight)
     ## 
     ## Residuals:
     ##      Min       1Q   Median       3Q      Max 
-    ## -1087.35  -183.44    -6.37   174.60  2481.40 
+    ## -1097.68  -184.86    -3.33   173.09  2344.15 
     ## 
-    ## Coefficients:
+    ## Coefficients: (3 not defined because of singularities)
     ##               Estimate Std. Error t value Pr(>|t|)    
-    ## (Intercept) -6154.9668    99.7784 -61.686  < 2e-16 ***
-    ## babysex2       30.9564     8.6548   3.577 0.000352 ***
-    ## bhead         135.7629     3.5072  38.710  < 2e-16 ***
-    ## blength        77.4074     2.0605  37.567  < 2e-16 ***
-    ## smoken         -2.6295     0.5792  -4.540 5.78e-06 ***
-    ## ppbmi         -14.8462     1.9470  -7.625 2.98e-14 ***
-    ## gaweeks        13.0137     1.4889   8.740  < 2e-16 ***
-    ## momage          6.2195     1.1097   5.604 2.22e-08 ***
-    ## delwt           3.6169     0.2869  12.605  < 2e-16 ***
+    ## (Intercept) -6265.3914   660.4011  -9.487  < 2e-16 ***
+    ## babysex2       28.7073     8.4652   3.391 0.000702 ***
+    ## bhead         130.7781     3.4523  37.881  < 2e-16 ***
+    ## blength        74.9536     2.0217  37.075  < 2e-16 ***
+    ## delwt           4.1007     0.3948  10.386  < 2e-16 ***
+    ## fincome         0.2898     0.1795   1.614 0.106551    
+    ## frace2         14.3313    46.1501   0.311 0.756168    
+    ## frace3         21.2361    69.2960   0.306 0.759273    
+    ## frace4        -46.9962    44.6782  -1.052 0.292912    
+    ## frace8          4.2969    74.0741   0.058 0.953745    
+    ## gaweeks        11.5494     1.4654   7.882 4.06e-15 ***
+    ## malform1        9.7650    70.6259   0.138 0.890039    
+    ## menarche       -3.5508     2.8951  -1.226 0.220083    
+    ## mheight         9.7874    10.3116   0.949 0.342588    
+    ## momage          0.7593     1.2221   0.621 0.534418    
+    ## mrace2       -151.4354    46.0453  -3.289 0.001014 ** 
+    ## mrace3        -91.3866    71.9190  -1.271 0.203908    
+    ## mrace4        -56.4787    45.1369  -1.251 0.210901    
+    ## parity         95.5411    40.4793   2.360 0.018307 *  
+    ## pnumlbw             NA         NA      NA       NA    
+    ## pnumsga             NA         NA      NA       NA    
+    ## ppbmi           4.3538    14.8913   0.292 0.770017    
+    ## ppwt           -3.4716     2.6121  -1.329 0.183913    
+    ## smoken         -4.8544     0.5871  -8.269  < 2e-16 ***
+    ## wtgain              NA         NA      NA       NA    
     ## ---
     ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
     ## 
-    ## Residual standard error: 279.3 on 4333 degrees of freedom
-    ## Multiple R-squared:  0.7031, Adjusted R-squared:  0.7026 
-    ## F-statistic:  1283 on 8 and 4333 DF,  p-value: < 2.2e-16
+    ## Residual standard error: 272.5 on 4320 degrees of freedom
+    ## Multiple R-squared:  0.7183, Adjusted R-squared:  0.717 
+    ## F-statistic: 524.6 on 21 and 4320 DF,  p-value: < 2.2e-16
+
+Since `babysex2`, `bhead`, `blength`, `delwt`, `gaweeks`, `mrace`,
+`mrace2`, `parity` and `smoken` are all significant, i am going to
+examine what the adjusted $r^2$ looks like
+
+``` r
+birthweight_model_adjusted <- 
+  lm(bwt~ babysex + bhead + blength + delwt + gaweeks + mrace + parity + smoken, data = birthweight)
+summary(birthweight_model_adjusted)
+```
+
+    ## 
+    ## Call:
+    ## lm(formula = bwt ~ babysex + bhead + blength + delwt + gaweeks + 
+    ##     mrace + parity + smoken, data = birthweight)
+    ## 
+    ## Residuals:
+    ##      Min       1Q   Median       3Q      Max 
+    ## -1119.67  -181.24    -5.87   173.51  2340.76 
+    ## 
+    ## Coefficients:
+    ##               Estimate Std. Error t value Pr(>|t|)    
+    ## (Intercept) -5822.5934    98.8325 -58.914  < 2e-16 ***
+    ## babysex2       28.6609     8.4951   3.374 0.000748 ***
+    ## bhead         131.6982     3.4607  38.056  < 2e-16 ***
+    ## blength        75.8653     2.0210  37.538  < 2e-16 ***
+    ## delwt           2.2649     0.1961  11.550  < 2e-16 ***
+    ## gaweeks        12.1400     1.4654   8.284  < 2e-16 ***
+    ## mrace2       -146.7893     9.2435 -15.880  < 2e-16 ***
+    ## mrace3        -71.5880    42.4809  -1.685 0.092026 .  
+    ## mrace4       -119.5979    18.7656  -6.373 2.04e-10 ***
+    ## parity         98.6113    40.5334   2.433 0.015021 *  
+    ## smoken         -4.7472     0.5882  -8.071 8.96e-16 ***
+    ## ---
+    ## Signif. codes:  0 '***' 0.001 '**' 0.01 '*' 0.05 '.' 0.1 ' ' 1
+    ## 
+    ## Residual standard error: 273.8 on 4331 degrees of freedom
+    ## Multiple R-squared:  0.7148, Adjusted R-squared:  0.7142 
+    ## F-statistic:  1086 on 10 and 4331 DF,  p-value: < 2.2e-16
 
 ``` r
 birthweight %>%
-  add_predictions(birthweight_model) %>%
-  add_residuals(birthweight_model) %>% 
+  add_predictions(birthweight_model_adjusted) %>%
+  add_residuals(birthweight_model_adjusted) %>% 
   ggplot(aes(x = pred, y = resid)) + 
   geom_point() 
 ```
 
-![](Homework-6_files/figure-gfm/unnamed-chunk-10-1.png)<!-- -->
+![](Homework-6_files/figure-gfm/unnamed-chunk-11-1.png)<!-- -->
 
 ``` r
 main_effects <- 
@@ -289,7 +343,7 @@ cv_df <-
     train = map(train, as_tibble), 
     test = map(test, as_tibble)
   ) %>% 
-  mutate(my_model = map(train, \(df) lm(bwt ~ babysex + bhead + blength + smoken + ppbmi + gaweeks + momage + delwt, data = df)),
+  mutate(my_model = map(train, \(df) lm(bwt~ babysex + bhead + blength + delwt + gaweeks + mrace + parity + smoken, data = df)),
     main_effects = map(train, \(df) lm(bwt ~ blength, gaweeks, data = df)), 
          interactions = map(train, \(df) lm(bwt ~bhead + blength + babysex + bhead*blength*babysex, data = df))) %>% 
   mutate(
@@ -297,7 +351,16 @@ cv_df <-
     rmse_maineffects = map2_dbl(main_effects, test, \(mod, df) rmse(model = mod, data = df)), 
     rmse_interactions = map2_dbl(interactions, test, \(mod, df) rmse(model = mod, data = df))
   )
+```
 
+    ## Warning: There were 2 warnings in `mutate()`.
+    ## The first warning was:
+    ## ℹ In argument: `rmse_mymodel = map2_dbl(...)`.
+    ## Caused by warning in `predict.lm()`:
+    ## ! prediction from rank-deficient fit; attr(*, "non-estim") has doubtful cases
+    ## ℹ Run `dplyr::last_dplyr_warnings()` to see the 1 remaining warning.
+
+``` r
 cv_df %>% 
   select(starts_with("rmse")) %>% 
   pivot_longer(everything(), 
@@ -309,4 +372,4 @@ cv_df %>%
   geom_violin()
 ```
 
-![](Homework-6_files/figure-gfm/unnamed-chunk-12-1.png)<!-- -->
+![](Homework-6_files/figure-gfm/unnamed-chunk-13-1.png)<!-- -->

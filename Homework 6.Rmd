@@ -146,14 +146,22 @@ There are no missing values in this dataset.
 
 ```{r}
 birthweight_model <- 
-  lm(bwt ~ babysex + bhead + blength + smoken + ppbmi + gaweeks + momage + delwt, data = birthweight)
+  lm(bwt ~ ., data = birthweight)
 summary(birthweight_model)
+```
+
+Since `babysex2`, `bhead`, `blength`, `delwt`, `gaweeks`, `mrace`, `mrace2`, `parity` and `smoken` are all significant, i am going to examine what the adjusted $r^2$ looks like
+
+```{r}
+birthweight_model_adjusted <- 
+  lm(bwt~ babysex + bhead + blength + delwt + gaweeks + mrace + parity + smoken, data = birthweight)
+summary(birthweight_model_adjusted)
 ```
 
 ```{r}
 birthweight %>%
-  add_predictions(birthweight_model) %>%
-  add_residuals(birthweight_model) %>% 
+  add_predictions(birthweight_model_adjusted) %>%
+  add_residuals(birthweight_model_adjusted) %>% 
   ggplot(aes(x = pred, y = resid)) + 
   geom_point() 
 ```
@@ -173,7 +181,7 @@ cv_df <-
     train = map(train, as_tibble), 
     test = map(test, as_tibble)
   ) %>% 
-  mutate(my_model = map(train, \(df) lm(bwt ~ babysex + bhead + blength + smoken + ppbmi + gaweeks + momage + delwt, data = df)),
+  mutate(my_model = map(train, \(df) lm(bwt~ babysex + bhead + blength + delwt + gaweeks + mrace + parity + smoken, data = df)),
     main_effects = map(train, \(df) lm(bwt ~ blength, gaweeks, data = df)), 
          interactions = map(train, \(df) lm(bwt ~bhead + blength + babysex + bhead*blength*babysex, data = df))) %>% 
   mutate(
